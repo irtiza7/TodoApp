@@ -53,7 +53,7 @@ extension CategoryViewControllerTableViewController {
     }
     
     private func fetchAllCategoriesFromDB() {
-        guard let categories = self.databaseService.fetchAllCategoriesFromDB() else {return}
+        guard let categories = self.databaseService.genericFetchAllRecordsFromDB(entityName: Category.self) else {return}
         self.categories = categories
     }
     

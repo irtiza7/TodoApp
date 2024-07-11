@@ -10,15 +10,26 @@ import UIKit
 import CoreData
 
 class DatabaseService {
+    
+    // MARK: - Static Properties
+    
     static let shared = DatabaseService()
+    
+    // MARK: - Private Properties
     
     private let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
     
-    var dbContext: NSManagedObjectContext {
+    // MARK: - Public Properties
+    
+    public var dbContext: NSManagedObjectContext {
         return self.context
     }
     
+    // MARK: - Initializers
+    
     private init() {}
+    
+    // MARK: - Methods For Saving Records
     
     public func saveDataToDB() {
         do {
@@ -27,9 +38,11 @@ class DatabaseService {
             print(error)
         }
     }
-
-    public func fetchAllTodosFromDB() -> [Todo]? {
-        let request: NSFetchRequest<Todo> = Todo.fetchRequest()
+    
+    // MARK: - Methods For Fetching All Records
+    
+    public func genericFetchAllRecordsFromDB<T: NSManagedObject>(entityName: T.Type) -> [T]? {
+        let request = NSFetchRequest<T>(entityName: String(describing: entityName))
         do {
             return try self.context.fetch(request)
         }catch {
@@ -38,19 +51,13 @@ class DatabaseService {
         }
     }
     
-    public func fetchAllCategoriesFromDB() -> [Category]? {
-        let request: NSFetchRequest<Category> = Category.fetchRequest()
-        do {
-            return try self.context.fetch(request)
-        }catch {
-            print(error)
-            return nil
-        }
-    }
+    // MARK: - Methods For Updating Records
     
     public func updateDataInDB() {
         self.saveDataToDB()
     }
+    
+    // MARK: - Methods For Deleting Records
     
     public func deleteTodoFromDB(todo: Todo) {
         self.context.delete(todo)
@@ -62,41 +69,43 @@ class DatabaseService {
         self.saveDataToDB()
     }
     
-    public func fetchTodosAgainstCategoryName(categoryName: String) -> [Todo]? {
-        let request: NSFetchRequest<Todo> = Todo.fetchRequest()
+    public func genericDeleteRecordFromDB(record: NSManagedObject) {
+        self.context.delete(record)
+        self.saveDataToDB()
+    }
+    
+    // MARK: - Methods for Fetching Records
+    
+    public func genericFetchRecordsAgainstAttributes<T: NSManagedObject>(entityName: T.Type, title: String = "", category: String = "") -> [T]? {
+        let request: NSFetchRequest<T> = NSFetchRequest(entityName: String(describing: entityName))
         
-        let predicate: NSPredicate = NSPredicate(format: "parentCategory.name MATCHES %@", categoryName)
-        request.predicate = predicate
+        var predicates: [NSPredicate] = []
+        if title != "" {
+            let predicate = NSPredicate(format: "title CONTAINS[cd] %@", title)
+            predicates.append(predicate)
+        }
+        if category != "" {
+            let predicate: NSPredicate = NSPredicate(format: "parentCategory.name MATCHES %@", category)
+            predicates.append(predicate)
+        }
+        switch predicates.count {
+        case let c where c > 1:
+            let compountPredicate: NSCompoundPredicate = NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
+            request.predicate = compountPredicate
+        case let c where c == 1:
+            request.predicate = predicates[0]
+        default:
+            break
+        }
         
         let sortDescriptor: NSSortDescriptor = NSSortDescriptor(key: "title", ascending: true)
         request.sortDescriptors = [sortDescriptor]
         
         do {
-            let result: [Todo] = try self.context.fetch(request)
-            return result
+            return try self.context.fetch(request)
         }catch {
             print(error)
             return nil
         }
-    }
-    
-    public func fetchTodosAgainstTitle(title: String, categoryName: String) -> [Todo]?{
-        let request: NSFetchRequest<Todo> = Todo.fetchRequest()
-        
-        let titlePredicate: NSPredicate = NSPredicate(format: "title CONTAINS[cd] %@", title)
-        let categoryPredicate: NSPredicate = NSPredicate(format: "parentCategory.name MATCHES %@", categoryName)
-        let compoundPredicate: NSCompoundPredicate = NSCompoundPredicate(andPredicateWithSubpredicates: [titlePredicate, categoryPredicate])
-        request.predicate = compoundPredicate
-        
-        let sortDescriptor: NSSortDescriptor = NSSortDescriptor(key: "title", ascending: true)
-        request.sortDescriptors = [sortDescriptor]
-        
-        do {
-            let todos: [Todo] = try self.context.fetch(request)
-            return todos
-        }catch {
-            print(error)
-        }
-        return nil
     }
 }

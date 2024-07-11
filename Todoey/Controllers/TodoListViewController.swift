@@ -13,7 +13,7 @@ class TodoListViewController: UITableViewController {
     private let dataService: DatabaseService = DatabaseService.shared
     private var todos: [Todo] = []
     
-    public var category: Category?
+    public var category: Category!
     
     @IBOutlet weak var todoSearchBar: UISearchBar!
     
@@ -80,7 +80,7 @@ extension TodoListViewController {
     
     private func fetchTodosAgaintTitleAndCategory(title: String, categoryName: String) {
         guard title != "" else {return}
-        guard let todos = self.dataService.fetchTodosAgainstTitle(title: title, categoryName: categoryName) else {
+        guard let todos = self.dataService.genericFetchRecordsAgainstAttributes(entityName: Todo.self, title: title, category: categoryName) else {
             self.todos = []
             return
         }
@@ -88,9 +88,8 @@ extension TodoListViewController {
     }
     
     private func fetchTodosAgainstCategoryName() {
-        guard let todos = self.dataService.fetchTodosAgainstCategoryName(categoryName: self.category!.name!) else {return}
+        guard let todos = self.dataService.genericFetchRecordsAgainstAttributes(entityName: Todo.self, category: self.category.name!)else {return}
         self.todos = todos
-        print(todos)
     }
 }
 
