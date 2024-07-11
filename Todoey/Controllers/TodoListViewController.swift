@@ -13,13 +13,19 @@ class TodoListViewController: UITableViewController {
     private let dataService: DatabaseService = DatabaseService.shared
     private var todos: [Todo] = []
     
+    public var category: Category?
+    
     @IBOutlet weak var todoSearchBar: UISearchBar!
+    
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+    }
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
         self.todoSearchBar.delegate = self
-        self.fetchTodosFromDB()
+        self.fetchTodosAgainstCategoryName()
 //        let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
     }
     
@@ -32,12 +38,13 @@ class TodoListViewController: UITableViewController {
         }
         
         let alertAction = UIAlertAction(title: "Add", style: .default) { action in
-            guard let item = uiTextField.text else {return}
-            guard item != "" else {return}
+            guard let todoTitle = uiTextField.text else {return}
+            guard todoTitle != "" else {return}
             
             let newTodo = Todo(context: self.dataService.dbContext)
-            newTodo.title = item
+            newTodo.title = todoTitle
             newTodo.isDone = false
+            newTodo.parentCategory = self.category!
             
             self.todos.append(newTodo)
             self.saveTodosIntoDB()
@@ -48,11 +55,11 @@ class TodoListViewController: UITableViewController {
     }
 }
 
-// MARK: - Data Model Methods
+// MARK: - Data Model Manipulation Methods
 
 extension TodoListViewController {
     private func fetchTodosFromDB() {
-        guard let todosArray = self.dataService.fetchAllDataFromDB() else {return}
+        guard let todosArray = self.dataService.fetchAllTodosFromDB() else {return}
         self.todos = todosArray
     }
     
@@ -71,13 +78,19 @@ extension TodoListViewController {
         self.dataService.deleteTodoFromDB(todo: self.todos[todoIndex])
     }
     
-    private func fetchTodosAgaintTitleString(title: String) {
+    private func fetchTodosAgaintTitleAndCategory(title: String, categoryName: String) {
         guard title != "" else {return}
-        guard let todos = self.dataService.fetchDataAgaistTitle(title: title) else {
+        guard let todos = self.dataService.fetchTodosAgainstTitle(title: title, categoryName: categoryName) else {
             self.todos = []
             return
         }
         self.todos = todos
+    }
+    
+    private func fetchTodosAgainstCategoryName() {
+        guard let todos = self.dataService.fetchTodosAgainstCategoryName(categoryName: self.category!.name!) else {return}
+        self.todos = todos
+        print(todos)
     }
 }
 
@@ -113,7 +126,7 @@ extension TodoListViewController: UISearchBarDelegate {
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
         guard let title = searchBar.text else {return}
         
-        self.fetchTodosAgaintTitleString(title: title)
+        self.fetchTodosAgaintTitleAndCategory(title: title, categoryName: self.category!.name!)
         self.tableView.reloadData()
     }
     
@@ -126,7 +139,7 @@ extension TodoListViewController: UISearchBarDelegate {
         self.todoSearchBar.text = nil
         self.todoSearchBar.resignFirstResponder()
         
-        self.fetchTodosFromDB()
+        self.fetchTodosAgainstCategoryName()
         self.tableView.reloadData()
     }
 }

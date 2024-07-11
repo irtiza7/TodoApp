@@ -20,44 +20,80 @@ class DatabaseService {
     
     private init() {}
     
-    func updateDataInDB() {
-        self.saveDataToDB()
-    }
-    
-    func deleteTodoFromDB(todo: Todo) {
-        self.context.delete(todo)
-        self.saveDataToDB()
-    }
-    
-    func saveDataToDB() {
+    public func saveDataToDB() {
         do {
             try context.save()
         }catch {
             print(error)
         }
     }
-    
-    func fetchDataAgaistTitle(title: String) -> [Todo]?{
+
+    public func fetchAllTodosFromDB() -> [Todo]? {
         let request: NSFetchRequest<Todo> = Todo.fetchRequest()
-        let predicate: NSPredicate = NSPredicate(format: "title CONTAINS[cd] %@", title)
+        do {
+            return try self.context.fetch(request)
+        }catch {
+            print(error)
+            return nil
+        }
+    }
+    
+    public func fetchAllCategoriesFromDB() -> [Category]? {
+        let request: NSFetchRequest<Category> = Category.fetchRequest()
+        do {
+            return try self.context.fetch(request)
+        }catch {
+            print(error)
+            return nil
+        }
+    }
+    
+    public func updateDataInDB() {
+        self.saveDataToDB()
+    }
+    
+    public func deleteTodoFromDB(todo: Todo) {
+        self.context.delete(todo)
+        self.saveDataToDB()
+    }
+    
+    public func deleteCategoryFromDB(category: Category) {
+        self.context.delete(category)
+        self.saveDataToDB()
+    }
+    
+    public func fetchTodosAgainstCategoryName(categoryName: String) -> [Todo]? {
+        let request: NSFetchRequest<Todo> = Todo.fetchRequest()
+        
+        let predicate: NSPredicate = NSPredicate(format: "parentCategory.name MATCHES %@", categoryName)
         request.predicate = predicate
+        
+        let sortDescriptor: NSSortDescriptor = NSSortDescriptor(key: "title", ascending: true)
+        request.sortDescriptors = [sortDescriptor]
+        
+        do {
+            let result: [Todo] = try self.context.fetch(request)
+            return result
+        }catch {
+            print(error)
+            return nil
+        }
+    }
+    
+    public func fetchTodosAgainstTitle(title: String, categoryName: String) -> [Todo]?{
+        let request: NSFetchRequest<Todo> = Todo.fetchRequest()
+        
+        let titlePredicate: NSPredicate = NSPredicate(format: "title CONTAINS[cd] %@", title)
+        let categoryPredicate: NSPredicate = NSPredicate(format: "parentCategory.name MATCHES %@", categoryName)
+        let compoundPredicate: NSCompoundPredicate = NSCompoundPredicate(andPredicateWithSubpredicates: [titlePredicate, categoryPredicate])
+        request.predicate = compoundPredicate
+        
         let sortDescriptor: NSSortDescriptor = NSSortDescriptor(key: "title", ascending: true)
         request.sortDescriptors = [sortDescriptor]
         
         do {
             let todos: [Todo] = try self.context.fetch(request)
             return todos
-        }catch {
-            print(error)
-        }
-        return nil
-    }
-    
-    func fetchAllDataFromDB() -> [Todo]? {
-        let request: NSFetchRequest<Todo> = Todo.fetchRequest()
-        do {
-            let data: [Todo] = try self.context.fetch(request)
-            return data
         }catch {
             print(error)
         }
